@@ -1,10 +1,13 @@
 package com.suvankarmitra.sender;
 
+import com.suvankarmitra.data.Constants;
 import com.suvankarmitra.data.FTConnection;
+import javafx.concurrent.Task;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -21,6 +24,7 @@ public class FTSender {
 
     private volatile double processFileProgress;
     private volatile boolean processingFileDone = false;
+    private boolean waitingForReceiver = true;
 
     public FTConnection getFtConnection() {
         return ftConnection;
@@ -32,6 +36,10 @@ public class FTSender {
 
     public boolean isProcessingFileDone() {
         return processingFileDone;
+    }
+
+    public boolean isWaitingForReceiver() {
+        return waitingForReceiver;
     }
 
     public FTSender(FTConnection ftConnection, String filePath) throws Exception {
@@ -60,15 +68,30 @@ public class FTSender {
         processFileThread.start();
     }
 
-    public void openConnectionAndWait() throws IOException {
+    public void openConnectionAndWait() throws Exception {
         System.out.println(ftConnection);
-        serverSocket = new ServerSocket(ftConnection.getPort());
-        System.out.println("Socket opening - "+serverSocket);
-        socket = serverSocket.accept();
-        System.out.println("Socket opened - "+socket);
-        ftConnection.setRemoteIP(socket.getRemoteSocketAddress().toString());
-        dis = new DataInputStream(socket.getInputStream());
-        dos = new DataOutputStream(socket.getOutputStream());
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        try {
+            executorService.submit(new Task() {
+                @Override
+                protected Object call() throws Exception {
+                    processingFileDone = false;
+                    serverSocket = new ServerSocket(ftConnection.getPort());
+                    System.out.println("Socket opening - "+serverSocket);
+                    socket = serverSocket.accept();
+                    System.out.println("Socket opened - "+socket);
+                    waitingForReceiver = false; // connected with receiver
+                    ftConnection.setRemoteIP(socket.getRemoteSocketAddress().toString().substring(1));
+                    dis = new DataInputStream(socket.getInputStream());
+                    dos = new DataOutputStream(socket.getOutputStream());
+                    return null;
+                }
+            }).get(Constants.SENDER_WAIT_TIME, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            waitingForReceiver = false;
+            throw e;
+        }
+
     }
 
     public void close() throws IOException {
@@ -95,21 +118,15 @@ public class FTSender {
             zipOut.write(bytes, 0, length);
             processedSize += length;
             processFileProgress = processedSize / (fileSize*1.0);
-        }
-        if(Thread.currentThread().isInterrupted()) {
-            processingFileDone = true;
-            processFileProgress = 0;
-            zipOut.close();
-            fis.close();
-            fos.close();
-            return;
-        }
-        processFileProgress = Math.ceil(processFileProgress);
-        if(processFileProgress>=1f) {
-            processingFileDone = true;
+            //System.out.println("Zip file progress: "+processFileProgress);
         }
         zipOut.close();
         fis.close();
         fos.close();
+        processingFileDone = true;
+        //System.out.println("Processing file done: "+processingFileDone);
+        if(Thread.currentThread().isInterrupted()) {
+            processFileProgress = 0;
+        }
     }
 }

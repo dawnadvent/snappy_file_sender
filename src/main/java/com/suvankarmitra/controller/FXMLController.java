@@ -1,5 +1,6 @@
-package com.suvankarmitra;
+package com.suvankarmitra.controller;
 
+import com.suvankarmitra.data.Constants;
 import com.suvankarmitra.data.FTConnection;
 import com.suvankarmitra.sender.FTSender;
 import com.suvankarmitra.utils.Toast;
@@ -25,6 +26,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Calendar;
 import java.util.ResourceBundle;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class FXMLController implements Initializable {
@@ -42,15 +44,18 @@ public class FXMLController implements Initializable {
     @FXML private Label _senderProcessFilePercentage;
     @FXML private Button _senderCancelButton;
     @FXML private ImageView _senderBusyLight;
-    @FXML private Label _senderReadyLabel;
+    //@FXML private Label _senderReadyLabel;
     @FXML private TextField _senderStatus;
     @FXML private ToggleButton _senderLocalIPToggle;
+    @FXML private CheckBox _senderProcessFileCheck;
+    @FXML private Label _senderCompressFileLabel;
     private String senderIPAddress;
     private String senderFilePath;
     private String senderPassword;
     private String senderLocalIP;
     private String senderPublicIP;
     private boolean senderTaskCancelled = false;
+    private boolean isCompressFileOn = true;
 
     /*Receiver tab fields*/
     @FXML private TextField _receiverFileName;
@@ -69,6 +74,8 @@ public class FXMLController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        init();
+
         /*About tab*/
         initAboutTab();
 
@@ -76,20 +83,7 @@ public class FXMLController implements Initializable {
         initSenderTab();
     }
 
-    private void initAboutTab() {
-        osInfo.setText(System.getProperty("os.name") + ", "+ System.getProperty("os.arch") +", "+ System.getProperty("os.version"));
-        javaInfo.setText(System.getProperty("java.version") +", "+ System.getProperty("java.vendor"));
-        buildInfo.setText("1.0.0");
-        buildDate.setText("05-May-2019");
-        int year = Calendar.getInstance().get(Calendar.YEAR);
-        _aboutCopyright.setText("\u00a9"+" Suvankar Mitra "+year);
-        _aboutCopyright.setAlignment(Pos.CENTER);
-    }
-
-    private void initSenderTab() {
-        _senderCancelButton.setDisable(true);
-        _senderReadyLabel.setAlignment(Pos.CENTER_RIGHT);
-
+    private void init() {
         try {
             this.senderLocalIP = Util.checkLocalIP();
             senderIPAddress = this.senderLocalIP;
@@ -104,6 +98,21 @@ public class FXMLController implements Initializable {
             e.printStackTrace();
             showError(e);
         }
+    }
+
+    private void initAboutTab() {
+        osInfo.setText(System.getProperty("os.name") + ", "+ System.getProperty("os.arch") +", "+ System.getProperty("os.version"));
+        javaInfo.setText(System.getProperty("java.version") +", "+ System.getProperty("java.vendor"));
+        buildInfo.setText("1.0.0");
+        buildDate.setText("05-May-2019");
+        int year = Calendar.getInstance().get(Calendar.YEAR);
+        _aboutCopyright.setText("\u00a9"+" Suvankar Mitra "+year);
+        _aboutCopyright.setAlignment(Pos.CENTER);
+    }
+
+    private void initSenderTab() {
+        _senderCancelButton.setDisable(true);
+        //_senderReadyLabel.setAlignment(Pos.CENTER_RIGHT);
 
         _senderLocalIPToggle.setOnAction(event -> {
             if(_senderLocalIPToggle.getText().equalsIgnoreCase("local-ip")) {
@@ -139,14 +148,6 @@ public class FXMLController implements Initializable {
         AtomicReference<FTSender> ftSender = new AtomicReference<>();
 
         _sendButton.setOnAction(event -> {
-            _sendButton.setDisable(true);
-            _senderFileChooser.setDisable(true);
-            _senderFilePath.setDisable(true);
-            _senderPassword.setDisable(true);
-            _senderCancelButton.setDisable(false);
-            _senderBusyLight.setImage(new Image(getClass().getResourceAsStream("red_dark.png")));
-            _senderReadyLabel.setText("BUSY");
-
             if(_senderFilePath.getText().isEmpty()) {
                 showAlertWithHeaderText("File not selected", "Error", "You must choose a file to send!", Alert.AlertType.ERROR);
                 resetSenderUI();
@@ -163,6 +164,15 @@ public class FXMLController implements Initializable {
                 senderPassword = _senderPassword.getText();
             }
 
+            _sendButton.setDisable(true);
+            _senderFileChooser.setDisable(true);
+            _senderFilePath.setDisable(true);
+            _senderPassword.setDisable(true);
+            _senderProcessFileCheck.setDisable(true);
+            _senderCancelButton.setDisable(false);
+            //_senderBusyLight.setImage(new Image(getClass().getResourceAsStream("red_dark.png")));
+            //_senderReadyLabel.setText("BUSY");
+
             FTConnection ftConnection = new FTConnection();
             ftConnection.setIp(senderIPAddress);
             ftConnection.setPort(PORT);
@@ -171,25 +181,30 @@ public class FXMLController implements Initializable {
             new Thread(()->{
                 try {
                     ftSender.set(new FTSender(ftConnection, senderFilePath));
-                    Platform.runLater(()->_senderStatus.setText("Compressing file"));
-                    ftSender.get().processFile();
 
-                    final boolean[] lightChange = {true};
-                    do {
-                        double processFileProgress = ftSender.get().getProcessFileProgress();
-                        Platform.runLater(()->{
-                            _senderProcessFilePB.setProgress(processFileProgress);
-                            _senderProcessFilePercentage.setText((int)(Math.ceil(processFileProgress*100))+"%");
-                            if(lightChange[0]) {
-                                _senderBusyLight.setImage(new Image(getClass().getResourceAsStream("red_dark.png")));
-                                lightChange[0] = !lightChange[0];
+                    if(isCompressFileOn) {
+                        //Platform.runLater(()->_senderStatus.setText("Compressing file"));
+                        ftSender.get().processFile();
+
+                        boolean lightChange = true;
+                        do {
+                            double processFileProgress = ftSender.get().getProcessFileProgress();
+                            Platform.runLater(()->{
+                                _senderProcessFilePB.setProgress(processFileProgress);
+                                _senderProcessFilePercentage.setText((int)(Math.ceil(processFileProgress*100))+"%");
+
+                            });
+                            if(lightChange) {
+                                //_senderBusyLight.setImage(new Image(getClass().getResourceAsStream("red_dark.png")));
+                                setStatusOfApplication("sender", "Compressing file "+(int)(Math.ceil(processFileProgress*100))+"%", 2);
                             } else {
-                                _senderBusyLight.setImage(new Image(getClass().getResourceAsStream("red_light.png")));
-                                lightChange[0] = !lightChange[0];
+                                //_senderBusyLight.setImage(new Image(getClass().getResourceAsStream("red_light.png")));
+                                setStatusOfApplication("sender", "Compressing file "+(int)(Math.ceil(processFileProgress*100))+"%", 3);
                             }
-                        });
-                        Thread.sleep(500);
-                    } while (!ftSender.get().isProcessingFileDone() || senderTaskCancelled);
+                            lightChange = !lightChange;
+                            Thread.sleep(400);
+                        } while (!ftSender.get().isProcessingFileDone() && !senderTaskCancelled);
+                    }
 
                     // Task is cancelled, return immediately
                     if(senderTaskCancelled) {
@@ -201,16 +216,37 @@ public class FXMLController implements Initializable {
                         double processFileProgress = ftSender.get().getProcessFileProgress();
                         _senderProcessFilePB.setProgress(processFileProgress);
                         _senderProcessFilePercentage.setText(Math.ceil(processFileProgress*100)+"%");
-                        _senderReadyLabel.setText("WAITING");
-                        _senderBusyLight.setImage(new Image(getClass().getResourceAsStream("yellow_dark.png")));
                     });
 
-                    Platform.runLater(()->_senderStatus.setText("Done compressing file"));
+                    //Platform.runLater(()->_senderStatus.setText("Done compressing file"));
+                    setStatusOfApplication("sender", "Done compressing file", 0);
 
-                    Platform.runLater(()->_senderStatus.setText("Waiting for receiver to connect."));
-                    ftSender.get().openConnectionAndWait();
+                    try {
+                        new Thread(()->{
+                            int waitTime = Constants.SENDER_WAIT_TIME;
+                            while(ftSender.get().isWaitingForReceiver() && waitTime>0) {
+                                int finalWaitTime = waitTime;
+                                //Platform.runLater(()->_senderStatus.setText("Waiting for receiver to connect ["+ finalWaitTime +"s]"));
+                                setStatusOfApplication("sender", "Waiting for receiver to connect ["+ finalWaitTime +"s]", 1);
+                                try {
+                                    Thread.sleep(1000);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                    break;
+                                }
+                                waitTime--;
+                            }
+                        }).start();
+                        ftSender.get().openConnectionAndWait();
+                    } catch (TimeoutException e) {
+                        Platform.runLater(()->showAlertWithHeaderText("Connection timed out", "Connection timed out", "Sender waited "+Constants.SENDER_WAIT_TIME+" secs, but no receiver joined!", Alert.AlertType.WARNING));
+                        resetSenderUI();
+                        return;
+                    }
                     String remoteIP = ftSender.get().getFtConnection().getRemoteIP();
-                    Platform.runLater(()->_senderStatus.setText("Connected to "+remoteIP));
+                    Platform.runLater(()-> {
+                        setStatusOfApplication("sender", "Connected to "+remoteIP, 1);
+                    });
 
                 } catch (Exception e) {
                     Platform.runLater(()->{
@@ -232,12 +268,22 @@ public class FXMLController implements Initializable {
         _senderCancelButton.setOnAction(event->{
             try {
                 senderTaskCancelled = true;
-                ftSender.get().close();
+                if(isCompressFileOn) {
+                    ftSender.get().close();
+                }
                 resetSenderUI();
                 Toast.makeText((Stage) _senderCancelButton.getScene().getWindow(),"Task cancelled",2000,500,500);
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        });
+
+        _senderProcessFileCheck.setOnAction(event->{
+            isCompressFileOn = _senderProcessFileCheck.isSelected();
+            _senderProcessFilePB.setDisable(!isCompressFileOn);
+            _senderProcessFilePercentage.setDisable(!isCompressFileOn);
+            _senderCompressFileLabel.setDisable(!isCompressFileOn);
+            System.out.println("checkbox "+isCompressFileOn);
         });
     }
 
@@ -253,8 +299,39 @@ public class FXMLController implements Initializable {
             _senderProcessFilePercentage.setText("0%");
             _senderCancelButton.setDisable(true);
             _senderBusyLight.setImage(new Image(getClass().getResourceAsStream("green_dark.png")));
-            _senderReadyLabel.setText("READY");
-            _senderStatus.setText("Status ready");
+            //_senderReadyLabel.setText("READY");
+            _senderStatus.setText("Ready");
+            _senderProcessFileCheck.setDisable(false);
+        });
+    }
+
+    /**
+     *
+     * @param whichTab (sender, receiver)
+     * @param status (status string)
+     * @param color (0=ready, 1=waiting, 2=busy_light, 3=busy_dark, default=0)
+     */
+    private void setStatusOfApplication(String whichTab, String status, int color) {
+        Platform.runLater(()->{
+            if(whichTab.equalsIgnoreCase("sender")) {
+                _senderStatus.setText(status);
+                switch (color) {
+                    case 1: // waiting
+                        _senderBusyLight.setImage(new Image(getClass().getResourceAsStream("yellow_dark.png")));
+                        break;
+                    case 2: // busy-light
+                        _senderBusyLight.setImage(new Image(getClass().getResourceAsStream("red_light.png")));
+                        break;
+                    case 3: // busy-dark
+                        _senderBusyLight.setImage(new Image(getClass().getResourceAsStream("red_dark.png")));
+                        break;
+
+                    default: // ready
+                        _senderBusyLight.setImage(new Image(getClass().getResourceAsStream("green_dark.png")));
+                        break;
+                }
+
+            }
         });
     }
 
@@ -268,7 +345,7 @@ public class FXMLController implements Initializable {
         });
     }
 
-    // Show a Information Alert without Header Text
+    // Show a Information Alert with Header Text
     private void showAlertWithHeaderText(String header, String title, String message, Alert.AlertType alertType) {
         Alert alert = new Alert(alertType);
         alert.setTitle(title);

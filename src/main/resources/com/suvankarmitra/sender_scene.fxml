@@ -16,13 +16,13 @@
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="450.0" prefWidth="400.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.suvankarmitra.FXMLController">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="450.0" prefWidth="400.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.suvankarmitra.controller.FXMLController">
    <children>
-      <TabPane layoutX="1.0" layoutY="1.0" prefHeight="450.0" prefWidth="400.0" tabClosingPolicy="UNAVAILABLE">
+      <TabPane layoutX="1.0" layoutY="1.0" prefHeight="450.0" prefWidth="400.0" style="-fx-background-color: #FFF;" tabClosingPolicy="UNAVAILABLE">
          <tabs>
             <Tab text="SENDER">
                <content>
-                  <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                  <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" style="-fx-background-color: #fff;">
                      <children>
                         <TextField fx:id="_senderRecIP1" editable="false" layoutX="32.0" layoutY="44.0" prefHeight="26.0" prefWidth="63.0" promptText="255" />
                         <TextField fx:id="_senderRecIP2" editable="false" layoutX="110.0" layoutY="44.0" prefHeight="26.0" prefWidth="63.0" promptText="255" />
@@ -36,7 +36,7 @@
                               <Font size="10.0" />
                            </font>
                         </Button>
-                        <Label layoutX="32.0" layoutY="157.0" text="COMPRESSING FILE" />
+                        <Label id="senderCompressFileLabel" fx:id="_senderCompressFileLabel" layoutX="32.0" layoutY="157.0" text="COMPRESSING FILE" />
                         <ProgressBar id="senderProcessFilePB" fx:id="_senderProcessFilePB" layoutX="32.0" layoutY="174.0" prefHeight="18.0" prefWidth="332.0" progress="0.0" />
                         <Label id="senderProcessFilePercentage" fx:id="_senderProcessFilePercentage" layoutX="159.0" layoutY="157.0" text="0%" />
                         <Label layoutX="32.0" layoutY="212.0" text="SENDING FILE" />
@@ -60,14 +60,30 @@
                               <Image url="@green_dark.png" />
                            </image>
                         </ImageView>
-                        <Label id="senderReadyLabel" fx:id="_senderReadyLabel" layoutX="308.0" layoutY="385.0" prefHeight="17.0" prefWidth="52.0" text="READY" textAlignment="RIGHT" />
-                        <TextField id="senderStatus" fx:id="_senderStatus" accessibleRole="TEXT" editable="false" layoutX="15.0" layoutY="381.0" prefHeight="25.0" prefWidth="274.0" style="-fx-background-color: #F5F5F5;" text="Satus ready" />
-                        <Separator layoutX="297.0" layoutY="377.0" orientation="VERTICAL" prefHeight="34.0" prefWidth="5.0" />
+                        <Label id="senderReadyLabel" fx:id="_senderReadyLabel" layoutX="293.0" layoutY="385.0" prefHeight="17.0" prefWidth="52.0" text="READY" textAlignment="RIGHT" visible="false">
+                           <font>
+                              <Font size="11.0" />
+                           </font></Label>
+                        <TextField id="senderStatus" fx:id="_senderStatus" accessibleRole="TEXT" editable="false" layoutX="15.0" layoutY="381.0" prefHeight="25.0" prefWidth="339.0" style="-fx-background-color: #fff;" text="Ready">
+                           <font>
+                              <Font size="11.0" />
+                           </font></TextField>
+                        <Separator layoutX="296.0" layoutY="377.0" orientation="VERTICAL" prefHeight="34.0" prefWidth="5.0" visible="false" />
                         <ToggleButton id="senderLocalIP" fx:id="_senderLocalIPToggle" layoutX="32.0" layoutY="323.0" mnemonicParsing="false" style="-fx-background-radius: 30 30 30 30;" text="LOCAL-IP" textAlignment="CENTER" textFill="#ae0573">
                            <font>
                               <Font size="10.0" />
                            </font></ToggleButton>
-                        <CheckBox id="senderProcessFileCheck" layoutX="347.0" layoutY="154.0" mnemonicParsing="false" selected="true" />
+                        <CheckBox id="senderProcessFileCheck" fx:id="_senderProcessFileCheck" layoutX="347.0" layoutY="154.0" mnemonicParsing="false" selected="true" />
+                        <Label layoutX="107.0" layoutY="90.0" text="*" textFill="#bc1313">
+                           <font>
+                              <Font name="System Bold" size="12.0" />
+                           </font>
+                        </Label>
+                        <Label layoutX="99.0" layoutY="275.0" text="*" textFill="#bc1313">
+                           <font>
+                              <Font name="System Bold" size="12.0" />
+                           </font>
+                        </Label>
                      </children>
                   </AnchorPane>
                </content>
